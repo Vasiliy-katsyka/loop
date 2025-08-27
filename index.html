@@ -17,10 +17,15 @@
             --color-text: #e0e0e0;
             --color-glow-record: #ff4141;
             --color-glow-play: #41ff6b;
+            --color-glow-armed: #ffc400;
+            --color-glow-overdub: #ff8c00;
             --color-led-off: #333;
             --color-led-record: #ff1818;
             --color-led-play: #18ff62;
+            --color-led-armed: #ffc400;
+            --color-led-overdub: #ff8c00;
             --color-mute: #ffc400;
+            --color-master: #ffffff;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -34,11 +39,12 @@
             align-items: center;
             min-height: 100vh;
             padding: 1rem;
+            -webkit-font-smoothing: antialiased;
         }
 
         .container {
             width: 100%;
-            max-width: 1000px;
+            max-width: 1200px;
             text-align: center;
         }
 
@@ -53,6 +59,22 @@
             font-size: 1.1rem;
             color: #aaa;
             transition: color 0.3s;
+        }
+        
+        #global-progress-bar-container {
+            width: 100%;
+            height: 6px;
+            background-color: #333;
+            border-radius: 3px;
+            margin-bottom: 1.5rem;
+            overflow: hidden;
+        }
+
+        #global-progress-bar {
+            width: 0%;
+            height: 100%;
+            background-color: var(--color-glow-play);
+            border-radius: 3px;
         }
 
         /* --- Master Controls --- */
@@ -75,30 +97,21 @@
             gap: 10px;
         }
 
-        .control-group label {
-            font-weight: 600;
-        }
+        .control-group label { font-weight: 600; }
 
-        .control-group input[type="number"], .control-group input[type="range"] {
-            background: #333;
-            border: 1px solid #555;
-            color: var(--color-text);
-            border-radius: 5px;
-            padding: 5px;
+        .control-group input[type="number"], .control-group select {
+            background: #333; border: 1px solid #555;
+            color: var(--color-text); border-radius: 5px; padding: 5px;
         }
 
         .control-group input[type="number"] { width: 70px; }
 
-        #metronome-toggle {
-            padding: 8px 12px;
-            border: 1px solid #777;
-            background-color: #444;
-            border-radius: 5px;
-            cursor: pointer;
+        .styled-button {
+            padding: 8px 12px; border: 1px solid #777; background-color: #444;
+            border-radius: 5px; cursor: pointer; color: var(--color-text);
         }
-        #metronome-toggle.active {
-            background-color: var(--color-glow-play);
-            color: #111;
+        .styled-button.active {
+            background-color: var(--color-glow-play); color: #111;
             border-color: var(--color-glow-play);
         }
 
@@ -106,122 +119,82 @@
         .pedal-board {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 20px;
+            gap: 25px;
             margin-bottom: 1.5rem;
         }
 
         .pedal {
             position: relative;
-            overflow: hidden;
-            aspect-ratio: 1 / 1.1;
+            aspect-ratio: 1 / 1.2;
             background: linear-gradient(145deg, #3c3c3c, #222);
             border: 2px solid var(--color-pedal-border);
-            border-radius: 12px;
-            cursor: pointer;
+            border-radius: 12px; cursor: pointer;
             transition: all 0.2s ease-in-out;
             box-shadow: 0 5px 15px rgba(0,0,0,0.5), inset 0 2px 2px rgba(255,255,255,0.05);
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px;
+            display: flex; flex-direction: column;
+            justify-content: space-between; padding: 8px;
         }
         
-        .pedal.droppable {
-            border-style: dashed;
-            border-color: var(--color-glow-play);
-        }
+        .pedal.master-loop { box-shadow: 0 0 10px var(--color-master), inset 0 0 5px var(--color-master); }
 
         .pedal-header {
-            width: 100%;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            width: 100%; display: flex;
+            justify-content: space-between; align-items: center;
         }
 
-        .pedal-number {
-            font-size: 1.5rem;
-            font-weight: 600;
-            color: #888;
-        }
+        .pedal-number { font-size: 1.5rem; font-weight: 600; color: #888; }
+        .led { width: 15px; height: 15px; background-color: var(--color-led-off); border-radius: 50%; border: 2px solid #111; }
+        .mute-btn { font-size: 0.8rem; font-weight: 600; background: #555; color: #ccc; border: 1px solid #777; border-radius: 5px; padding: 2px 6px; cursor: pointer; z-index: 10; }
+        .mute-btn.muted { background: var(--color-mute); color: #111; border-color: var(--color-mute); }
 
-        .led {
-            width: 15px; height: 15px;
-            background-color: var(--color-led-off);
-            border-radius: 50%;
-            border: 2px solid #111;
-        }
-        
-        .mute-btn {
-            font-size: 0.8rem;
-            font-weight: 600;
-            background: #555;
-            color: #ccc;
-            border: 1px solid #777;
-            border-radius: 5px;
-            padding: 2px 6px;
-            cursor: pointer;
-            z-index: 10;
-        }
-        .mute-btn.muted {
-            background: var(--color-mute);
-            color: #111;
-            border-color: var(--color-mute);
-        }
+        .waveform-container { position: relative; width: 100%; height: 50%; }
+        .waveform-canvas { width: 100%; height: 100%; }
+        .progress-overlay { position: absolute; top: 0; left: 0; height: 100%; width: 0; background-color: rgba(65, 255, 107, 0.2); mix-blend-mode: lighten; }
+        .countdown-display { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 2.5rem; font-weight: 600; color: white; text-shadow: 0 0 8px black; pointer-events: none; }
 
-        /* --- Waveform and Progress --- */
-        .waveform-container {
-            position: absolute;
-            top: 50%;
-            left: 0;
-            transform: translateY(-50%);
-            width: 100%;
-            height: 60%;
-        }
-        .waveform-canvas {
-            width: 100%;
-            height: 100%;
-        }
-        .progress-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            height: 100%;
-            width: 0;
-            background-color: rgba(65, 255, 107, 0.2);
-            mix-blend-mode: lighten;
-        }
+        .pedal-footer { display: flex; gap: 5px; align-items: center; padding: 0 5px; }
+        .pedal-footer label { font-size: 0.7rem; }
+        .pedal-footer input[type="range"] { flex-grow: 1; }
 
         /* Pedal States */
+        .pedal.armed { border-color: var(--color-glow-armed); animation: pulse-armed 1.5s infinite; }
+        .pedal.armed .led { background-color: var(--color-led-armed); box-shadow: 0 0 10px var(--color-led-armed); }
         .pedal.recording { border-color: var(--color-glow-record); animation: pulse-record 1.5s infinite; }
         .pedal.recording .led { background-color: var(--color-led-record); box-shadow: 0 0 10px var(--color-led-record); }
+        .pedal.overdubbing { border-color: var(--color-glow-overdub); animation: pulse-overdub 1.5s infinite; }
+        .pedal.overdubbing .led { background-color: var(--color-led-overdub); box-shadow: 0 0 10px var(--color-led-overdub); }
         .pedal.playing { border-color: var(--color-glow-play); }
         .pedal.playing .led { background-color: var(--color-led-play); box-shadow: 0 0 10px var(--color-led-play); }
 
-        @keyframes pulse-record {
-            50% { box-shadow: 0 0 35px var(--color-glow-record); }
-        }
+        @keyframes pulse-record { 50% { box-shadow: 0 0 35px var(--color-glow-record); } }
+        @keyframes pulse-armed { 50% { box-shadow: 0 0 35px var(--color-glow-armed); } }
+        @keyframes pulse-overdub { 50% { box-shadow: 0 0 35px var(--color-glow-overdub); } }
 
-        /* --- Session & Footer Controls --- */
-        .session-controls, .footer-controls {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            margin-bottom: 1rem;
+        /* --- Footer Controls --- */
+        .session-controls { display: flex; justify-content: center; gap: 15px; margin-bottom: 1rem; }
+        .session-controls button {
+            padding: 10px 20px; font-size: 1rem; font-weight: 600; color: var(--color-text);
+            border-radius: 8px; cursor: pointer; transition: all 0.2s;
         }
-        .session-controls button, .footer-controls button {
-            padding: 10px 20px; font-size: 1rem; font-weight: 600;
-            color: var(--color-text); border-radius: 8px; cursor: pointer;
-            transition: all 0.2s;
-        }
-        #master-stop { background-color: #800; border: 2px solid #c00; }
-        #master-stop:hover { background-color: #a00; border-color: #f33; box-shadow: 0 0 15px #f33; }
-        #save-session-btn { background-color: #005a9c; border: 2px solid #007acc; }
-        #save-session-btn:hover { background-color: #007acc; border-color: #3af; box-shadow: 0 0 15px #3af; }
-        #load-session-btn { background-color: #007a2e; border: 2px solid #009c3a; }
-        #load-session-btn:hover { background-color: #009c3a; border-color: #3c3; box-shadow: 0 0 15px #3c3; }
+        #master-stop-btn { background-color: #800; border: 2px solid #c00; }
+        #master-stop-btn:hover { background-color: #a00; border-color: #f33; box-shadow: 0 0 15px #f33; }
+        #undo-btn { background-color: #a50; border: 2px solid #d80; }
+        #undo-btn:hover { background-color: #d80; border-color: #fa0; box-shadow: 0 0 15px #fa0; }
         
-        .shortcuts-help { color: #888; font-size: 0.9rem; }
+        #help-btn { position: fixed; top: 15px; right: 15px; width: 40px; height: 40px; border-radius: 50%; background: #333; border: 2px solid #666; font-size: 1.5rem; font-weight: 600; cursor: pointer; }
+
+        /* --- Modal --- */
+        .modal {
+            display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%;
+            overflow: auto; background-color: rgba(0,0,0,0.7);
+        }
+        .modal-content {
+            background-color: #2d2d2d; margin: 10% auto; padding: 25px; border: 1px solid #888;
+            width: 80%; max-width: 600px; border-radius: 10px; color: var(--color-text);
+        }
+        .modal-content h2 { margin-top: 0; }
+        .modal-content code { background: #444; padding: 2px 5px; border-radius: 3px; }
+        .close-btn { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
 
         @media (max-width: 800px) {
             .pedal-board { grid-template-columns: repeat(2, 1fr); }
@@ -233,84 +206,131 @@
 
     <div class="container">
         <h1>Sheeran Looper Pro</h1>
-        <p id="status-display">Set BPM, then click a pedal to record on the next beat.</p>
+        <p id="status-display">Connect MIDI or click a pedal to start.</p>
+        
+        <div id="global-progress-bar-container"><div id="global-progress-bar"></div></div>
 
         <div class="master-controls">
             <div class="control-group">
                 <label for="bpm-input">BPM:</label>
                 <input type="number" id="bpm-input" value="120" min="40" max="240">
-                <button id="metronome-toggle">Metronome</button>
+                <button id="metronome-toggle" class="styled-button">Metronome</button>
             </div>
             <div class="control-group">
-                <label for="master-volume">Master Vol:</label>
-                <input type="range" id="master-volume" min="0" max="1" step="0.01" value="0.8">
+                 <label for="midi-input-select">MIDI In:</label>
+                 <select id="midi-input-select"></select>
+            </div>
+             <div class="control-group">
+                <label for="count-in-toggle">Count-In:</label>
+                <button id="count-in-toggle" class="styled-button">Off</button>
             </div>
         </div>
 
         <div class="pedal-board" id="pedal-board"></div>
         
         <div class="session-controls">
-            <button id="save-session-btn">Save Session</button>
-            <button id="load-session-btn">Load Session</button>
-            <input type="file" id="load-session-input" accept=".json" style="display: none;">
-            <input type="file" id="import-audio-input" accept="audio/*" style="display: none;">
-        </div>
-        
-        <div class="footer-controls">
-            <button id="master-stop">Stop All</button>
+            <button id="undo-btn">Undo Last</button>
+            <button id="master-stop-btn">Stop All</button>
         </div>
         
         <p class="shortcuts-help">
-            <b>Keys:</b> [1-8] Toggle Pedal | [M] Metronome | [SPACE] Stop All | [S] Save | [L] Load
+            <b>Keys:</b> [1-8] Pedal Action | [Dbl-Click 1-8] Stop Pedal | [Shift+1-8] Mute | [SPACE] Stop All
         </p>
     </div>
+
+    <button id="help-btn">?</button>
+
+    <div id="help-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h2>MIDI Control Setup (Arturia MiniLab 3)</h2>
+            <p>To use your MiniLab 3 for hands-free looping, you need to configure its pads to send the correct MIDI messages. This can be done using Arturia's free "MIDI Control Center" software.</p>
+            <h4>Recommended Pad Configuration:</h4>
+            <ol>
+                <li><strong>Open MIDI Control Center</strong> and connect your MiniLab 3.</li>
+                <li>Select one of the User memory slots to edit.</li>
+                <li><strong>Set Pad Mode:</strong> For each of the 8 pads, set the "Mode" to <code>Note</code>.</li>
+                <li><strong>Assign MIDI Notes:</strong>
+                    <ul>
+                        <li>Assign Pad 1 to send MIDI Note <code>C1</code> (Note Number 36).</li>
+                        <li>Assign Pad 2 to send MIDI Note <code>C#1</code> (Note Number 37).</li>
+                        <li>...continue sequentially up to Pad 8 sending <code>G1</code> (Note Number 43).</li>
+                    </ul>
+                </li>
+                 <li><strong>Set Channel:</strong> Ensure all pads are sending on the same MIDI Channel. Channel 10 is common for drums/pads, but any channel will work.</li>
+                <li><strong>Save to Device:</strong> Once configured, save the preset back to your MiniLab's user memory slot.</li>
+            </ol>
+            <h4>Default Controls:</h4>
+            <ul>
+                <li><strong>Pads 1-8 (Notes 36-43):</strong> Main pedal action (Record / Overdub / Stop).</li>
+                <li>The application will automatically detect your controller. Just select it from the "MIDI In" dropdown after connecting it.</li>
+            </ul>
+        </div>
+    </div>
+
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             // --- DOM Elements ---
             const pedalBoard = document.getElementById('pedal-board');
             const statusDisplay = document.getElementById('status-display');
-            const masterStopBtn = document.getElementById('master-stop');
+            const masterStopBtn = document.getElementById('master-stop-btn');
+            const undoBtn = document.getElementById('undo-btn');
             const bpmInput = document.getElementById('bpm-input');
             const metronomeToggle = document.getElementById('metronome-toggle');
-            const masterVolumeSlider = document.getElementById('master-volume');
-            const saveBtn = document.getElementById('save-session-btn');
-            const loadBtn = document.getElementById('load-session-btn');
-            const loadInput = document.getElementById('load-session-input');
-            const importAudioInput = document.getElementById('import-audio-input');
+            const countInToggle = document.getElementById('count-in-toggle');
+            const midiSelect = document.getElementById('midi-input-select');
+            const globalProgressBar = document.getElementById('global-progress-bar');
+            const helpBtn = document.getElementById('help-btn');
+            const helpModal = document.getElementById('help-modal');
+            const closeModalBtn = helpModal.querySelector('.close-btn');
 
-            // --- Constants & State ---
+            // --- State ---
             const NUM_PEDALS = 8;
             let pedals = [];
             let isMicAccessGranted = false;
             let mediaStream = null;
-            let baseLoopDuration = 0; // Duration of the first loop, for synchronization
+            let masterLoopIndex = -1;
             let nextBeatTime = 0;
             let beatNumber = 0;
-            let timerID;
+            let schedulerTimerID;
             let isMetronomeOn = false;
+            let isCountInEnabled = false;
+            let lastRecordedPedalIndex = -1;
+            let clickTimeout = null;
 
-            // --- Web Audio API Setup ---
+            // --- Web Audio API ---
             let audioContext;
             let masterGainNode;
 
             function initAudioContext() {
-                if (!audioContext) {
-                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                    masterGainNode = audioContext.createGain();
-                    masterGainNode.gain.value = masterVolumeSlider.value;
-                    masterGainNode.connect(audioContext.destination);
+                if (audioContext && audioContext.state === 'running') return;
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioContext.state === 'suspended') {
+                    audioContext.resume();
                 }
+                masterGainNode = audioContext.createGain();
+                masterGainNode.gain.value = 0.8;
+                masterGainNode.connect(audioContext.destination);
             }
 
             // --- Metronome & Scheduler ---
             function metronomeScheduler() {
                 while (nextBeatTime < audioContext.currentTime + 0.1) {
                     if (isMetronomeOn) playMetronomeClick(nextBeatTime);
+                    pedals.forEach((p, index) => {
+                        if (p.countdown > 0) {
+                            p.countdown--;
+                            updateCountdownDisplay(index, p.countdown > 0 ? p.countdown : 'REC');
+                            if(p.countdown === 0) {
+                                setTimeout(() => updateCountdownDisplay(index, ''), 500);
+                            }
+                        }
+                    });
                     nextBeatTime += 60.0 / bpmInput.value;
                     beatNumber++;
                 }
-                timerID = window.setTimeout(metronomeScheduler, 25.0);
+                schedulerTimerID = window.setTimeout(metronomeScheduler, 25.0);
             }
 
             function playMetronomeClick(time) {
@@ -324,40 +344,29 @@
                 osc.start(time);
                 osc.stop(time + 0.05);
             }
-
-            function toggleMetronome() {
-                initAudioContext();
-                isMetronomeOn = !isMetronomeOn;
-                metronomeToggle.classList.toggle('active', isMetronomeOn);
-                if (isMetronomeOn && !timerID) {
-                    nextBeatTime = audioContext.currentTime;
-                    metronomeScheduler();
-                }
-            }
             
             // --- Pedal Initialization ---
             function initializePedals() {
                 for (let i = 0; i < NUM_PEDALS; i++) {
-                    const { pedalElement, muteBtn, canvas, progressOverlay } = createPedalElement(i);
+                    const pedalElements = createPedalElement(i);
                     pedals[i] = {
-                        state: 'empty',
-                        domElement: pedalElement,
-                        muteBtn: muteBtn,
-                        canvas: canvas,
-                        canvasCtx: canvas.getContext('2d'),
-                        progressOverlay: progressOverlay,
+                        state: 'empty', // empty, armed, recording, playing, overdubbing
+                        ...pedalElements,
                         isMuted: false,
-                        audioChunks: [],
+                        layers: [],
+                        activeSources: [],
+                        syncTimeout: null,
+                        countdown: 0,
                     };
-                    pedalBoard.appendChild(pedalElement);
+                    pedalBoard.appendChild(pedalElements.domElement);
                 }
             }
 
             function createPedalElement(index) {
-                const pedal = document.createElement('div');
-                pedal.className = 'pedal';
-                pedal.dataset.index = index;
-                pedal.innerHTML = `
+                const domElement = document.createElement('div');
+                domElement.className = 'pedal';
+                domElement.dataset.index = index;
+                domElement.innerHTML = `
                     <div class="pedal-header">
                         <div class="led"></div>
                         <div class="pedal-number">${index + 1}</div>
@@ -366,223 +375,300 @@
                     <div class="waveform-container">
                         <canvas class="waveform-canvas"></canvas>
                         <div class="progress-overlay"></div>
+                        <div class="countdown-display"></div>
+                    </div>
+                    <div class="pedal-footer">
+                        <label>V</label><input type="range" class="volume-slider" min="0" max="1.5" step="0.01" value="1">
+                        <label>P</label><input type="range" class="pan-slider" min="-1" max="1" step="0.01" value="0">
                     </div>
                 `;
-                const muteBtn = pedal.querySelector('.mute-btn');
-                const canvas = pedal.querySelector('.waveform-canvas');
-                const progressOverlay = pedal.querySelector('.progress-overlay');
-
-                pedal.addEventListener('click', () => handlePedalClick(index));
-                muteBtn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    toggleMute(index);
-                });
                 
-                // Drag and Drop for Audio Import
-                pedal.addEventListener('dragover', (e) => { e.preventDefault(); pedal.classList.add('droppable'); });
-                pedal.addEventListener('dragleave', () => pedal.classList.remove('droppable'));
-                pedal.addEventListener('drop', (e) => {
-                    e.preventDefault();
-                    pedal.classList.remove('droppable');
-                    const file = e.dataTransfer.files[0];
-                    if (file && file.type.startsWith('audio/')) {
-                        loadAudioFileIntoPedal(file, index);
+                domElement.addEventListener('click', () => {
+                    if (clickTimeout !== null) {
+                        clearTimeout(clickTimeout);
+                        clickTimeout = null;
+                        handlePedalDoubleClick(index);
+                    } else {
+                        clickTimeout = setTimeout(() => {
+                           clickTimeout = null;
+                           handlePedalClick(index);
+                        }, 250); // 250ms window for double click
                     }
                 });
 
-                return { pedalElement: pedal, muteBtn, canvas, progressOverlay };
-            }
+                const muteBtn = domElement.querySelector('.mute-btn');
+                muteBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleMute(index); });
 
+                const volumeSlider = domElement.querySelector('.volume-slider');
+                volumeSlider.addEventListener('input', (e) => {
+                    e.stopPropagation();
+                    if(pedals[index].gainNode) pedals[index].gainNode.gain.value = e.target.value;
+                });
+                
+                const panSlider = domElement.querySelector('.pan-slider');
+                panSlider.addEventListener('input', (e) => {
+                    e.stopPropagation();
+                    if(pedals[index].pannerNode) pedals[index].pannerNode.pan.value = e.target.value;
+                });
+                
+                return {
+                    domElement, muteBtn,
+                    canvas: domElement.querySelector('.waveform-canvas'),
+                    canvasCtx: domElement.querySelector('.waveform-canvas').getContext('2d'),
+                    progressOverlay: domElement.querySelector('.progress-overlay'),
+                    countdownDisplay: domElement.querySelector('.countdown-display'),
+                };
+            }
+            
             // --- Core Looping Logic ---
             async function handlePedalClick(index) {
-                initAudioContext();
+                await initAudioContext();
                 if (!isMicAccessGranted) {
                     const hasMic = await getMicAccess();
                     if (!hasMic) return;
                 }
+                if (!schedulerTimerID) startScheduler();
 
                 const pedal = pedals[index];
                 switch (pedal.state) {
                     case 'empty':
-                        startRecording(index);
+                        armForRecording(index);
+                        break;
+                    case 'armed':
+                        cancelArm(index);
                         break;
                     case 'recording':
-                        stopRecording(index);
+                    case 'overdubbing':
+                        armToStopRecording(index);
                         break;
                     case 'playing':
-                        stopPlaying(index);
+                        armForOverdub(index);
                         break;
                 }
             }
 
-            function startRecording(index) {
-                if (!timerID) { // Start scheduler if not running
-                    nextBeatTime = audioContext.currentTime;
-                    metronomeScheduler();
-                }
-
+            function handlePedalDoubleClick(index) {
                 const pedal = pedals[index];
-                pedal.recorder = new MediaRecorder(mediaStream);
-                const recordStartTime = nextBeatTime;
-                
-                statusDisplay.textContent = `Waiting for beat to record on Pedal ${index + 1}...`;
+                if (pedal.state === 'playing' || pedal.state === 'overdubbing') {
+                    stopPlaying(index);
+                }
+            }
+            
+            function armForRecording(index) {
+                const pedal = pedals[index];
+                pedal.state = 'armed';
+                updatePedalUI(index);
 
-                setTimeout(() => {
-                    if (pedal.state === 'empty') { // Check if not cancelled
-                        pedal.recorder.start();
-                        pedal.state = 'recording';
-                        pedal.startTime = recordStartTime;
-                        updatePedalUI(index);
-                        statusDisplay.textContent = `Recording on Pedal ${index + 1}...`;
-                    }
-                }, (recordStartTime - audioContext.currentTime) * 1000);
+                if (masterLoopIndex !== -1) {
+                    const masterLoop = pedals[masterLoopIndex];
+                    const timeToLoopStart = (masterLoop.layers[0].buffer.duration - masterLoop.activeSources[0].mediaElement.currentTime) * 1000;
+                    statusDisplay.textContent = `Pedal ${index + 1} armed. Waiting for Master Loop...`;
+                    pedal.syncTimeout = setTimeout(() => startRecording(index), timeToLoopStart);
+                } else {
+                    const beatsToWait = isCountInEnabled ? 4 : 0;
+                    if (beatsToWait > 0) pedal.countdown = beatsToWait;
+                    const timeToStart = (nextBeatTime - audioContext.currentTime + (beatsToWait * (60.0 / bpmInput.value))) * 1000;
+                    statusDisplay.textContent = `Pedal ${index + 1} armed. Waiting for beat...`;
+                    pedal.syncTimeout = setTimeout(() => startRecording(index), timeToStart);
+                }
+            }
+
+            function armForOverdub(index) {
+                const pedal = pedals[index];
+                pedal.state = 'armed';
+                updatePedalUI(index);
+                const masterLoop = pedals[masterLoopIndex];
+                const timeToLoopStart = (masterLoop.layers[0].buffer.duration - masterLoop.activeSources[0].mediaElement.currentTime) * 1000;
+                statusDisplay.textContent = `Pedal ${index + 1} armed for overdub...`;
+                pedal.syncTimeout = setTimeout(() => startOverdubbing(index), timeToLoopStart);
+            }
+
+            function startRecording(index) {
+                const pedal = pedals[index];
+                if (pedal.state !== 'armed') return;
+                pedal.recorder = new MediaRecorder(mediaStream);
+                pedal.recorder.start();
+                pedal.state = 'recording';
+                updatePedalUI(index);
+                statusDisplay.textContent = `Recording on Pedal ${index + 1}...`;
+            }
+            
+            function startOverdubbing(index) {
+                 const pedal = pedals[index];
+                 if (pedal.state !== 'armed') return;
+                 pedal.recorder = new MediaRecorder(mediaStream);
+                 pedal.recorder.start();
+                 pedal.state = 'overdubbing';
+                 updatePedalUI(index);
+                 statusDisplay.textContent = `Overdubbing on Pedal ${index + 1}...`;
+            }
+
+            function armToStopRecording(index) {
+                const pedal = pedals[index];
+                statusDisplay.textContent = `Arming stop for Pedal ${index + 1}...`;
+
+                if (masterLoopIndex !== -1) {
+                    const masterLoop = pedals[masterLoopIndex];
+                    const timeToLoopEnd = (masterLoop.layers[0].buffer.duration - masterLoop.activeSources[0].mediaElement.currentTime) * 1000;
+                    pedal.syncTimeout = setTimeout(() => stopRecording(index), timeToLoopEnd);
+                } else {
+                    const timeToNextBeat = (nextBeatTime - audioContext.currentTime) * 1000;
+                    pedal.syncTimeout = setTimeout(() => stopRecording(index), timeToNextBeat);
+                }
             }
             
             function stopRecording(index) {
                 const pedal = pedals[index];
-                if (pedal.state !== 'recording') return;
-
-                let recordStopTime;
-                if (baseLoopDuration > 0) {
-                    const elapsed = audioContext.currentTime - pedal.startTime;
-                    const loopCycles = Math.ceil(elapsed / baseLoopDuration);
-                    recordStopTime = pedal.startTime + (loopCycles * baseLoopDuration);
-                } else {
-                    recordStopTime = nextBeatTime;
-                }
-
-                statusDisplay.textContent = `Waiting for beat to stop recording...`;
-
-                setTimeout(() => {
-                    if (pedal.recorder && pedal.recorder.state === 'recording') {
-                        pedal.recorder.stop();
-                    }
-                }, (recordStopTime - audioContext.currentTime) * 1000);
-                
-                pedal.recorder.ondataavailable = e => pedal.audioChunks.push(e.data);
-                pedal.recorder.onstop = () => processRecordedAudio(index);
+                if ((pedal.state !== 'recording' && pedal.state !== 'overdubbing') || !pedal.recorder || pedal.recorder.state !== 'recording') return;
+                pedal.recorder.ondataavailable = e => processRecordedAudio(index, e.data);
+                pedal.recorder.stop();
             }
 
-            async function processRecordedAudio(index) {
+            async function processRecordedAudio(index, audioData) {
                 const pedal = pedals[index];
-                const audioBlob = new Blob(pedal.audioChunks, { 'type' : 'audio/webm;codecs=opus' });
-                pedal.audioBlob = audioBlob;
+                const audioBlob = new Blob([audioData], { 'type': 'audio/webm;codecs=opus' });
                 const arrayBuffer = await audioBlob.arrayBuffer();
-                pedal.audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+                const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+
+                pedal.layers.push({ blob: audioBlob, buffer: audioBuffer });
+                lastRecordedPedalIndex = index;
                 
-                if (baseLoopDuration === 0) {
-                    baseLoopDuration = pedal.audioBuffer.duration;
+                if (masterLoopIndex === -1) {
+                    masterLoopIndex = index;
                 }
                 
-                setupAndPlayLoop(index);
+                // Stop current playback to restart with the new layer
+                stopAllSourcesForPedal(index);
+                playAllLayers(index);
             }
 
-            function setupAndPlayLoop(index) {
+            function playAllLayers(index) {
                 const pedal = pedals[index];
-                if (!pedal.audioBuffer) return;
+                if (pedal.layers.length === 0) return;
 
-                pedal.audioElement = new Audio(URL.createObjectURL(pedal.audioBlob));
-                pedal.audioElement.loop = true;
-                
-                pedal.audioSourceNode = audioContext.createMediaElementSource(pedal.audioElement);
-                pedal.gainNode = audioContext.createGain();
-                pedal.gainNode.gain.value = pedal.isMuted ? 0 : 1;
-                pedal.audioSourceNode.connect(pedal.gainNode).connect(masterGainNode);
-                
-                pedal.audioElement.play();
+                // Re-create gain/panner nodes if they don't exist
+                if (!pedal.gainNode) pedal.gainNode = audioContext.createGain();
+                if (!pedal.pannerNode) pedal.pannerNode = audioContext.createStereoPanner();
+                pedal.gainNode.gain.value = pedal.domElement.querySelector('.volume-slider').value;
+                pedal.pannerNode.pan.value = pedal.domElement.querySelector('.pan-slider').value;
+                pedal.gainNode.connect(pedal.pannerNode).connect(masterGainNode);
+
+                pedal.layers.forEach(layer => {
+                    const mediaElement = new Audio(URL.createObjectURL(layer.blob));
+                    mediaElement.loop = true;
+                    const sourceNode = audioContext.createMediaElementSource(mediaElement);
+                    sourceNode.connect(pedal.gainNode);
+                    mediaElement.play();
+                    pedal.activeSources.push({ mediaElement, sourceNode });
+                });
+
                 pedal.state = 'playing';
                 updatePedalUI(index);
-                drawWaveform(index);
+                drawWaveform(index, pedal.layers.length -1); // Draw latest layer
                 startProgressBarAnimation(index);
-                statusDisplay.textContent = `Loop ${index + 1} playing.`;
+            }
+
+            function stopAllSourcesForPedal(index) {
+                const pedal = pedals[index];
+                pedal.activeSources.forEach(src => {
+                    src.mediaElement.pause();
+                    src.mediaElement.remove();
+                    src.sourceNode.disconnect();
+                });
+                pedal.activeSources = [];
             }
 
             function stopPlaying(index, fullReset = true) {
                 const pedal = pedals[index];
-                if (pedal.animationFrameId) {
-                    cancelAnimationFrame(pedal.animationFrameId);
-                    pedal.animationFrameId = null;
-                }
-                pedal.progressOverlay.style.width = '0%';
-                
-                if (pedal.audioElement) {
-                    pedal.audioElement.pause();
-                    pedal.audioElement.remove();
-                }
-                if(pedal.audioSourceNode) pedal.audioSourceNode.disconnect();
+                if (pedal.animationFrameId) cancelAnimationFrame(pedal.animationFrameId);
+                if (pedal.syncTimeout) clearTimeout(pedal.syncTimeout);
+
+                stopAllSourcesForPedal(index);
 
                 if (fullReset) {
                     pedal.state = 'empty';
-                    pedal.audioChunks = [];
-                    pedal.audioBlob = null;
-                    pedal.audioBuffer = null;
+                    pedal.layers = [];
                     clearCanvas(index);
-                    statusDisplay.textContent = `Loop ${index + 1} stopped.`;
-                    
-                    // If this was the base loop, reset master duration
-                    const isAnyLoopPlaying = pedals.some(p => p.state === 'playing');
-                    if (!isAnyLoopPlaying) baseLoopDuration = 0;
+                    statusDisplay.textContent = `Loop ${index + 1} stopped & cleared.`;
+
+                    if (index === masterLoopIndex) {
+                        masterLoopIndex = pedals.findIndex(p => p.state === 'playing');
+                        // if no other loops are playing, reset masterLoopIndex
+                         if (masterLoopIndex === -1) {
+                            globalProgressBar.style.width = '0%';
+                         }
+                    }
+                } else {
+                    pedal.state = 'stopped'; // Or some other state if we want to pause
                 }
                 updatePedalUI(index);
             }
-
-            // --- Mixing & UI ---
-            function toggleMute(index) {
-                const pedal = pedals[index];
-                pedal.isMuted = !pedal.isMuted;
-                pedal.muteBtn.classList.toggle('muted', pedal.isMuted);
-                if (pedal.gainNode) {
-                    pedal.gainNode.gain.setValueAtTime(pedal.isMuted ? 0 : 1, audioContext.currentTime);
-                }
-            }
-
+            
+            // --- UI & Visuals ---
             function updatePedalUI(index) {
                 const pedal = pedals[index];
                 pedal.domElement.className = 'pedal'; // Reset
-                if (pedal.state === 'recording') pedal.domElement.classList.add('recording');
-                if (pedal.state === 'playing') pedal.domElement.classList.add('playing');
+                if (pedal.state) pedal.domElement.classList.add(pedal.state);
+                if (index === masterLoopIndex) pedal.domElement.classList.add('master-loop');
             }
-            
+
+            function updateCountdownDisplay(index, text) {
+                pedals[index].countdownDisplay.textContent = text;
+            }
+
             function startProgressBarAnimation(index) {
                 const pedal = pedals[index];
                 const animate = () => {
-                    if (pedal.state !== 'playing' || !pedal.audioElement) return;
-                    const progress = (pedal.audioElement.currentTime / pedal.audioElement.duration) * 100;
-                    pedal.progressOverlay.style.width = `${progress}%`;
+                    if (pedal.state !== 'playing' && pedal.state !== 'overdubbing') return;
+                    if(pedal.activeSources.length > 0) {
+                        const progress = (pedal.activeSources[0].mediaElement.currentTime / pedal.activeSources[0].mediaElement.duration) * 100;
+                        pedal.progressOverlay.style.width = `${progress}%`;
+                        if (index === masterLoopIndex) {
+                           globalProgressBar.style.width = `${progress}%`;
+                        }
+                    }
                     pedal.animationFrameId = requestAnimationFrame(animate);
                 };
                 animate();
             }
 
-            function drawWaveform(index) {
+            function drawWaveform(index, layerIndex) {
                 const pedal = pedals[index];
-                if (!pedal.audioBuffer) return;
-                
+                const layer = pedal.layers[layerIndex];
+                if (!layer || !layer.buffer) return;
+
                 const canvas = pedal.canvas;
                 const ctx = pedal.canvasCtx;
-                const data = pedal.audioBuffer.getChannelData(0);
+                const data = layer.buffer.getChannelData(0);
                 const width = canvas.width;
                 const height = canvas.height;
                 const step = Math.ceil(data.length / width);
                 const amp = height / 2;
 
-                ctx.fillStyle = '#222';
-                ctx.fillRect(0, 0, width, height);
-                ctx.lineWidth = 1;
-                ctx.strokeStyle = 'rgba(65, 255, 107, 0.7)';
-                ctx.beginPath();
+                ctx.clearRect(0, 0, width, height); // Clear previous drawings
                 
-                for (let i = 0; i < width; i++) {
-                    let min = 1.0; let max = -1.0;
-                    for (let j = 0; j < step; j++) {
-                        const datum = data[(i * step) + j];
-                        if (datum < min) min = datum;
-                        if (datum > max) max = datum;
+                // Draw all layers semi-transparently
+                pedals[index].layers.forEach((l, i) => {
+                    const layerData = l.buffer.getChannelData(0);
+                    const isLastLayer = i === pedals[index].layers.length - 1;
+                    ctx.lineWidth = isLastLayer ? 1.5 : 1;
+                    ctx.strokeStyle = isLastLayer ? 'rgba(65, 255, 107, 1)' : 'rgba(65, 255, 107, 0.3)';
+                    ctx.beginPath();
+                    for (let x = 0; x < width; x++) {
+                        let min = 1.0; let max = -1.0;
+                        for (let j = 0; j < step; j++) {
+                            const datum = layerData[(x * step) + j];
+                            if (datum < min) min = datum;
+                            if (datum > max) max = datum;
+                        }
+                         if (x === 0) {
+                             ctx.moveTo(x, (1 + max) * amp);
+                         } else {
+                             ctx.lineTo(x, (1 + max) * amp);
+                         }
                     }
-                    ctx.moveTo(i, (1 + min) * amp);
-                    ctx.lineTo(i, (1 + max) * amp);
-                }
-                ctx.stroke();
+                    ctx.stroke();
+                });
             }
 
             function clearCanvas(index) {
@@ -590,153 +676,103 @@
                 p.canvasCtx.clearRect(0, 0, p.canvas.width, p.canvas.height);
             }
 
-            // --- Master Functions ---
+            // --- Master & Utility Functions ---
             function masterStop() {
-                let wasActive = false;
                 for (let i = 0; i < NUM_PEDALS; i++) {
-                    if (pedals[i].state !== 'empty') {
-                        wasActive = true;
-                        if (pedals[i].recorder && pedals[i].recorder.state === 'recording') {
-                           pedals[i].recorder.stop(); // Stop recording, but don't save
-                           pedals[i].state = 'empty';
-                           pedals[i].audioChunks = [];
-                           updatePedalUI(i);
-                        } else {
-                           stopPlaying(i);
-                        }
+                    if (pedals[i].state !== 'empty') stopPlaying(i);
+                }
+                masterLoopIndex = -1;
+                globalProgressBar.style.width = '0%';
+                statusDisplay.textContent = 'All loops stopped.';
+            }
+            
+            function undo() {
+                if (lastRecordedPedalIndex === -1) return;
+                const pedal = pedals[lastRecordedPedalIndex];
+                if (pedal.layers.length > 0) {
+                    pedal.layers.pop();
+                    stopAllSourcesForPedal(lastRecordedPedalIndex);
+                    if(pedal.layers.length > 0) {
+                        playAllLayers(lastRecordedPedalIndex);
+                    } else {
+                        stopPlaying(lastRecordedPedalIndex, true); // True to fully reset
                     }
                 }
-                if (wasActive) {
-                    baseLoopDuration = 0;
-                    statusDisplay.textContent = 'All loops stopped.';
+            }
+
+            function toggleMute(index) {
+                const pedal = pedals[index];
+                pedal.isMuted = !pedal.isMuted;
+                pedal.muteBtn.classList.toggle('muted', pedal.isMuted);
+                if (pedal.gainNode) {
+                    const volume = pedal.domElement.querySelector('.volume-slider').value;
+                    pedal.gainNode.gain.setValueAtTime(pedal.isMuted ? 0 : volume, audioContext.currentTime);
                 }
             }
             
-            // --- Save/Load Session ---
-            const blobToBase64 = blob => new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.readAsDataURL(blob);
-                reader.onloadend = () => resolve(reader.result);
-                reader.onerror = error => reject(error);
-            });
+            function getMicAccess() { return navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => { mediaStream = stream; isMicAccessGranted = true; return true; }).catch(() => { statusDisplay.textContent = 'Error: Mic access denied.'; return false; }); }
+            function startScheduler() { nextBeatTime = audioContext.currentTime; metronomeScheduler(); }
 
-            async function saveSession() {
-                const sessionData = {
-                    bpm: bpmInput.value,
-                    masterVolume: masterVolumeSlider.value,
-                    baseLoopDuration,
-                    pedals: []
-                };
-
-                for (let i = 0; i < pedals.length; i++) {
-                    const p = pedals[i];
-                    if (p.audioBlob) {
-                        sessionData.pedals[i] = {
-                            isMuted: p.isMuted,
-                            audioBase64: await blobToBase64(p.audioBlob)
-                        };
-                    } else {
-                        sessionData.pedals[i] = null;
-                    }
+            // --- MIDI ---
+            function setupMIDI() {
+                if(navigator.requestMIDIAccess) {
+                    navigator.requestMIDIAccess().then(onMIDISuccess, onMIDIFailure);
+                } else {
+                    statusDisplay.textContent = "Web MIDI API not supported in this browser.";
                 }
-
-                const jsonString = JSON.stringify(sessionData, null, 2);
-                const blob = new Blob([jsonString], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `looper-session-${new Date().toISOString().slice(0, 10)}.json`;
-                a.click();
-                URL.revokeObjectURL(url);
             }
 
-            function loadSessionFromFile(file) {
-                const reader = new FileReader();
-                reader.onload = async (e) => {
-                    masterStop();
-                    initAudioContext();
-                    const sessionData = JSON.parse(e.target.result);
-                    bpmInput.value = sessionData.bpm;
-                    masterVolumeSlider.value = sessionData.masterVolume;
-                    masterGainNode.gain.value = sessionData.masterVolume;
-                    baseLoopDuration = sessionData.baseLoopDuration || 0;
+            function onMIDISuccess(midiAccess) {
+                const inputs = midiAccess.inputs.values();
+                for(let input = inputs.next(); input && !input.done; input = inputs.next()) {
+                    const option = document.createElement('option');
+                    option.value = input.value.id;
+                    option.text = input.value.name;
+                    midiSelect.appendChild(option);
+                    input.value.onmidimessage = onMIDIMessage;
+                }
+            }
 
-                    for (let i = 0; i < sessionData.pedals.length; i++) {
-                        const savedPedal = sessionData.pedals[i];
-                        if (savedPedal) {
-                            const audioBlob = await (await fetch(savedPedal.audioBase64)).blob();
-                            pedals[i].audioBlob = audioBlob;
-                            const arrayBuffer = await audioBlob.arrayBuffer();
-                            pedals[i].audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-                            
-                            pedals[i].isMuted = savedPedal.isMuted;
-                            pedals[i].muteBtn.classList.toggle('muted', savedPedal.isMuted);
-                            setupAndPlayLoop(i);
+            function onMIDIFailure() { statusDisplay.textContent = "Could not access MIDI devices."; }
+            
+            function onMIDIMessage(event) {
+                const [command, note, velocity] = event.data;
+                // Note On command
+                if (command === 144 || command === 153) { // 144: Note On on Ch1, 153: Note On on Ch10
+                    if (velocity > 0) {
+                        const pedalIndex = note - 36; // C1 is 36
+                        if (pedalIndex >= 0 && pedalIndex < NUM_PEDALS) {
+                            handlePedalClick(pedalIndex);
                         }
                     }
-                    statusDisplay.textContent = "Session loaded successfully.";
-                };
-                reader.readAsText(file);
-            }
-
-            async function loadAudioFileIntoPedal(file, index) {
-                masterStop(); // Stop everything for simplicity when importing
-                initAudioContext();
-                const pedal = pedals[index];
-
-                const audioBlob = new Blob([file], { type: file.type });
-                pedal.audioBlob = audioBlob;
-                const arrayBuffer = await audioBlob.arrayBuffer();
-                pedal.audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-                
-                if (baseLoopDuration === 0) {
-                    baseLoopDuration = pedal.audioBuffer.duration;
-                    console.log(`Base loop duration set by imported file: ${baseLoopDuration}`);
-                }
-
-                setupAndPlayLoop(index);
-            }
-
-            // --- Mic Access ---
-            async function getMicAccess() {
-                try {
-                    mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                    isMicAccessGranted = true;
-                    return true;
-                } catch (err) {
-                    statusDisplay.textContent = 'Error: Microphone access denied.';
-                    return false;
                 }
             }
 
             // --- Event Listeners ---
             masterStopBtn.addEventListener('click', masterStop);
-            metronomeToggle.addEventListener('click', toggleMetronome);
-            masterVolumeSlider.addEventListener('input', () => {
-                if(masterGainNode) masterGainNode.gain.value = masterVolumeSlider.value;
-            });
-            saveBtn.addEventListener('click', saveSession);
-            loadBtn.addEventListener('click', () => loadInput.click());
-            loadInput.addEventListener('change', (e) => loadSessionFromFile(e.target.files[0]));
-            
+            undoBtn.addEventListener('click', undo);
+            metronomeToggle.addEventListener('click', () => { initAudioContext(); isMetronomeOn = !isMetronomeOn; metronomeToggle.classList.toggle('active', isMetronomeOn); if (isMetronomeOn && !schedulerTimerID) startScheduler(); });
+            countInToggle.addEventListener('click', () => { isCountInEnabled = !isCountInEnabled; countInToggle.textContent = isCountInEnabled ? 'On' : 'Off'; countInToggle.classList.toggle('active', isCountInEnabled); });
+            helpBtn.addEventListener('click', () => helpModal.style.display = 'block');
+            closeModalBtn.addEventListener('click', () => helpModal.style.display = 'none');
+            window.addEventListener('click', (e) => { if(e.target == helpModal) helpModal.style.display = 'none'; });
+
             document.addEventListener('keydown', (e) => {
-                if (e.target.tagName === 'INPUT') return; // Don't trigger shortcuts when typing in BPM
-                if (e.code.startsWith('Digit')) {
+                if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+                
+                if (e.shiftKey && e.code.startsWith('Digit')) {
                     const index = parseInt(e.key) - 1;
-                    if (index >= 0 && index < NUM_PEDALS) {
-                        e.preventDefault();
-                        handlePedalClick(index);
-                    }
-                }
-                if (e.code === 'Space') { e.preventDefault(); masterStop(); }
-                if (e.key === 'm' || e.key === 'M') { e.preventDefault(); toggleMetronome(); }
-                if (e.key === 's' || e.key === 'S') { e.preventDefault(); saveSession(); }
-                if (e.key === 'l' || e.key === 'L') { e.preventDefault(); loadBtn.click(); }
+                    if (index >= 0 && index < NUM_PEDALS) { e.preventDefault(); toggleMute(index); }
+                } else if (e.code.startsWith('Digit')) {
+                    const index = parseInt(e.key) - 1;
+                    if (index >= 0 && index < NUM_PEDALS) { e.preventDefault(); handlePedalClick(index); }
+                } else if (e.code === 'Space') { e.preventDefault(); masterStop(); }
             });
 
             // --- Final Initialization ---
             initializePedals();
+            setupMIDI();
         });
     </script>
 </body>
-              </html>
+</html>
